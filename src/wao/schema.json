@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WAO DSL Schema",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "steps"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^0\\.1\\.\\d+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

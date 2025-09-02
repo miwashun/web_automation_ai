@@ -1,0 +1,15 @@
+[flake8]
+# 最大行長（black と揃える）
+max-line-length = 88
+
+# black と競合するルールを無効化
+extend-ignore = E203, W503
+
+# 除外ディレクトリ
+exclude = .venv,build,dist,__pycache__,.git
+
+# 型ヒント未使用の警告を有効化（flake8-annotations を入れた場合）
+# enable-extensions = ANN
+
+# 複雑度チェック（mccabe）
+max-complexity = 10

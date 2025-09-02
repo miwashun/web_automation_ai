@@ -1,0 +1,32 @@
+{
+  "version": "0.1.0",
+  "name": "example_open_and_click",
+  "steps": [
+    {
+      "action": "open_url",
+      "url": "https://example.com"
+    },
+    {
+      "action": "wait",
+      "ms": 500
+    },
+    {
+      "action": "click",
+      "selector": "#login"
+    },
+    {
+      "action": "fill",
+      "selector": "#username",
+      "value": "alice"
+    },
+    {
+      "action": "fill",
+      "selector": "#password",
+      "value": "secret"
+    },
+    {
+      "action": "download",
+      "path": "./artifacts"
+    }
+  ]
+}

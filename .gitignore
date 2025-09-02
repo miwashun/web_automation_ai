@@ -1,0 +1,48 @@
+# --- Python bytecode ---
+__pycache__/
+*.py[cod]
+
+# --- Virtual environments ---
+.venv/
+env/
+venv/
+.env/
+.env.local
+.env.*.local
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+
+# --- OS / FS noise ---
+.DS_Store
+Thumbs.db
+
+# --- Packaging / build ---
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Lint / type-check / tool caches ---
+.mypy_cache/
+.pytest_cache/
+.cache/
+.pyre/
+.pytype/
+.dmypy.json
+.pre-commit-cache/
+.pre-commit-config.yaml~
+
+# --- Logs / reports ---
+*.log
+logs/
+coverage.xml
+.coverage
+htmlcov/
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- Project specifics ---
+src/wao.egg-info/
