@@ -1,0 +1,16 @@
+{
+  "version": "0.1.0",
+  "name": "mytokyogas_poc",
+  "steps": [
+    {
+      "action": "open_url",
+      "name": "open_example",
+      "url": "https://example.com"
+    },
+    {
+      "action": "wait",
+      "name": "wait_short",
+      "ms": 1000
+    }
+  ]
+}
