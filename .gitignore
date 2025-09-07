@@ -46,3 +46,6 @@ htmlcov/
 
 # --- Project specifics ---
 src/wao.egg-info/
+
+# secrets
+secrets.json
