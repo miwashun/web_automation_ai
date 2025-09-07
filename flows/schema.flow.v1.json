@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WAO Flow v1",
+  "type": "object",
+  "required": ["version", "name", "steps"],
+  "properties": {
+    "version": { "type": "string", "const": "0.1.0" },
+    "name": { "type": "string", "minLength": 1 },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["action", "name"],
+        "properties": {
+          "action": { "type": "string", "enum": ["open_url", "wait", "click", "fill", "log", "sleep_random"] },
+          "name": { "type": "string", "minLength": 1 },
+
+          "url": { "type": "string", "format": "uri" },
+          "ms": { "type": "integer", "minimum": 0 },
+
+          "selector": { "type": "string", "minLength": 1 },
+          "value": { "type": "string" },
+
+          "message": { "type": "string" },
+
+          "min_ms": { "type": "integer", "minimum": 0 },
+          "max_ms": { "type": "integer", "minimum": 0 }
+        },
+        "allOf": [
+          { "if": { "properties": { "action": { "const": "open_url" } } }, "then": { "required": ["url"] } },
+          { "if": { "properties": { "action": { "const": "wait" } } }, "then": { "required": ["ms"] } },
+          { "if": { "properties": { "action": { "const": "click" } } }, "then": { "required": ["selector"] } },
+          { "if": { "properties": { "action": { "const": "fill" } } }, "then": { "required": ["selector", "value"] } },
+          { "if": { "properties": { "action": { "const": "log" } } }, "then": { "required": ["message"] } },
+          { "if": { "properties": { "action": { "const": "sleep_random" } } }, "then": { "required": ["min_ms", "max_ms"] } }
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
