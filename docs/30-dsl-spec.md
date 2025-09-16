@@ -39,6 +39,9 @@
 - `cookies(set?[],clear?[])` / `headers(set?{},clear?[])` — セッション調整
 - `eval_js(expression,as?)` — ページコンテキストでJS評価し変数に格納
 - `verify_file(hash,record)` — ハッシュ計算 & 監査記録
+- `log(message,level?)` — 構造化ログへ出力（level: info|warn|error。既定: info）
+- `sleep_random(min_ms,max_ms)` — ランダム待機（ボット検知回避/レート制御）
+- `assert_title(expected,match_mode?)` — ページタイトル検証（match_mode: equals|contains|matches。既定: equals）
 
 ## 4.3 confirm_plan の導入
 - LLMの誤操作を防ぐため、実行前に人間の承認を必須化。
@@ -162,6 +165,37 @@
 - `totp`はコードを生成して`set_var`で`{{totp_code}}`などに格納して`fill`で使用。
 - `solve_2fa`(email) の追加フィールド: `inbox`(IMAP/POP接続文字列), `filter`, `subject_regex?`, `body_regex?`, `timeout`。
 
+### 4.5.14 log
+- 目的: 任意メッセージを構造化ログ(JSONL)へ出力し、デバッグ/監査を容易にする。
+- フィールド:
+  - `message` (string, required): 出力内容。テンプレ/変数参照可。
+  - `level` (string, optional, default: `info`): `info` | `warn` | `error`。
+- 例:
+```json
+{"act":"log","message":"ログイン開始 site={{site}} user={{secrets.example.USER}}","level":"info"}
+```
+
+### 4.5.15 sleep_random
+- 目的: 人間らしい待機やレート制御のため、ランダムなスリープを行う。
+- フィールド:
+  - `min_ms` (integer, required): 最小待機ミリ秒。
+  - `max_ms` (integer, required): 最大待機ミリ秒。`max_ms >= min_ms`。
+- 例:
+```json
+{"act":"sleep_random","min_ms":800,"max_ms":2000}
+```
+
+### 4.5.16 assert_title
+- 目的: ページタイトルが期待通りかを簡易検証し、CIでの pass/fail 判定をしやすくする。
+- フィールド:
+  - `expected` (string, required): 期待値。`match_mode` により扱いが変化。
+  - `match_mode` (string, optional, default: `equals`): `equals` | `contains` | `matches`（正規表現）。
+  - `message` (string, optional): 失敗時にログへ出す説明文。
+- 例:
+```json
+{"act":"assert_title","expected":"ダッシュボード","match_mode":"contains","message":"ログイン後のダッシュボードに到達していない"}
+```
+
 ---
 
 ## 4.6 変数とテンプレート
@@ -213,7 +247,10 @@
         {"properties":{"act":{"const":"wait_for"},"selector":{"type":"string"},"state":{"enum":["attached","detached","visible","hidden","enabled","disabled","stable"]},"timeout":{"type":"integer"}}},
         {"properties":{"act":{"const":"extract"},"selector":{"type":"string"},"attr":{"type":"string"},"regex":{"type":"string"},"as":{"type":"string"}},"required":["selector","as"]},
         {"properties":{"act":{"const":"assert"},"left":{},"op":{"enum":["eq","ne","contains","matches","gt","gte","lt","lte","exists"]},"right":{}},"required":["left","op"]},
-        {"properties":{"act":{"const":"screenshot"},"target":{"enum":["fullpage","viewport","selector"]},"path":{"type":"string"},"record":{"type":"boolean"}}}
+        {"properties":{"act":{"const":"screenshot"},"target":{"enum":["fullpage","viewport","selector"]},"path":{"type":"string"},"record":{"type":"boolean"}}},
+        {"properties":{"act":{"const":"log"},"message":{"type":"string"},"level":{"enum":["info","warn","error"]}},"required":["message"]},
+        {"properties":{"act":{"const":"sleep_random"},"min_ms":{"type":"integer","minimum":0},"max_ms":{"type":"integer","minimum":0}},"required":["min_ms","max_ms"]},
+        {"properties":{"act":{"const":"assert_title"},"expected":{"type":"string"},"match_mode":{"enum":["equals","contains","matches"]},"message":{"type":"string"}},"required":["expected"]}
       ]
     }
   }
