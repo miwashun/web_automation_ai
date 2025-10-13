@@ -54,3 +54,9 @@
 - **Context**：背景・制約
 - **Decision**：採用/不採用・理由
 - **Consequences**：トレードオフ・見直し条件
+
+## 12. デザインパターン方針
+設計の一貫性と拡張容易性を確保するため、主要レイヤごとの設計パターンを整理しています。
+詳細は次を参照してください：
+
+➡️ [Design Patterns Policy for `web_automation_ai` (v0.1)](./design-patterns-policy.md)
