@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "name": "Example.com Basic Test (schema-compliant)",
+  "steps": [
+    { "name": "log_start", "action": "log", "message": "Opening example.com" },
+    { "name": "open_example", "action": "open_url", "url": "https://example.com" },
+    { "name": "wait_after_open", "action": "wait", "timeout": 1000 },
+    { "name": "grab_screenshot", "action": "screenshot", "path": "screenshots/example_basic.png" },
+    { "name": "log_done", "action": "log", "message": "✅ Flow completed successfully" }
+  ]
+}
