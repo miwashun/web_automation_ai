@@ -1,14 +1,28 @@
 from __future__ import annotations
-from typing import Any, Dict, List
-from .logging_setup import get_logger
-import time, random, sys, re, json
-from pathlib import Path
-from datetime import datetime
+
+import json
+import random
+import re
+import sys
+import time
 from contextlib import contextmanager
-from playwright.sync_api import sync_playwright
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from playwright.sync_api import (
+    Browser,
+    BrowserContext,
+    Page,
+    Playwright,
+    sync_playwright,
+)
+
 from . import secrets
+from .logging_setup import get_logger
 
 log = get_logger(__name__)
+
 
 class Runner:
     def __init__(self, dsl: Dict[str, Any]):
@@ -24,19 +38,28 @@ class Runner:
         self.trace_dir.mkdir(parents=True, exist_ok=True)
         self.trace_path = self.trace_dir / f"run_{self._timestamp()}.jsonl"
 
-        self._pw = None
-        self._browser = None
-        self._page = None
+        self._pw: Optional[Playwright] = None
+        self._browser: Optional[Browser] = None
+        self._context: Optional[BrowserContext] = None
+        self._page: Optional[Page] = None
 
         # --- Playwright bootstrap (single browser/page reused across steps) ---
         try:
             self._pw = sync_playwright().start()
             # Headless by default; adjust if needed
             self._browser = self._pw.chromium.launch(headless=True)
-            self._page = self._browser.new_page()
+            # use a context for future trace/download features
+            self._context = self._browser.new_context()
+            self._page = self._context.new_page()
         except Exception as e:
             log.error("Failed to initialize Playwright: %s", e)
             raise
+
+    def _page_req(self) -> Page:
+        """Ensure Playwright page is initialized (helps mypy avoid Optional unions)."""
+        if self._page is None:
+            raise RuntimeError("Playwright page not initialized")
+        return self._page
 
     def _trace(self, kind: str, payload: Dict[str, Any]) -> None:
         """Append a single JSON record to the run trace (artifacts/trace/*.jsonl)."""
@@ -73,10 +96,20 @@ class Runner:
             self._trace("step_err", {"i": idx, "ms": ms, "url": url, "error": str(e)})
             raise
 
-    def run(self) -> None:
+    def run(self) -> None:  # noqa: C901
         steps: List[Dict[str, Any]] = self.dsl.get("steps", [])
-        log.info("Run started: site=%s version=%s", self.dsl.get("site", "-"), self.dsl.get("version", "-"))
-        self._trace("run_start", {"site": self.dsl.get("site", "-"), "version": self.dsl.get("version", "-")})
+        log.info(
+            "Run started: site=%s version=%s",
+            self.dsl.get("site", "-"),
+            self.dsl.get("version", "-"),
+        )
+        self._trace(
+            "run_start",
+            {
+                "site": self.dsl.get("site", "-"),
+                "version": self.dsl.get("version", "-"),
+            },
+        )
         # unified run-end status will be emitted once in finally
         run_status = "ok"
         run_error = None
@@ -91,29 +124,52 @@ class Runner:
                         if kind in ("open_url", "goto"):
                             url = secrets.resolve(step["url"])
                             log.info("  → goto %s", url)
-                            self._page.goto(url)
+                            page = self._page_req()
+                            page.goto(url)
 
                         elif kind == "wait_for_selector":
                             selector = step["selector"]
                             timeout = int(step.get("timeout", 10000))
-                            state = step.get("state") or "visible"  # "attached" | "detached" | "hidden" | "visible"
-                            log.info("  → wait_for_selector selector=%s state=%s timeout=%d", selector, state, timeout)
-                            self._page.wait_for_selector(selector, state=state, timeout=timeout)
+                            state = (
+                                step.get("state") or "visible"
+                            )  # "attached" | "detached" | "hidden" | "visible"
+                            log.info(
+                                "  → wait_for_selector selector=%s state=%s timeout=%d",
+                                selector,
+                                state,
+                                timeout,
+                            )
+                            page = self._page_req()
+                            page.wait_for_selector(
+                                selector, state=state, timeout=timeout
+                            )
 
                         elif kind == "wait_for_url":
                             substr = step.get("url_substr") or step.get("contains")
                             timeout = int(step.get("timeout", 10000))
                             if not substr:
-                                raise ValueError("wait_for_url requires 'url_substr' (or 'contains')")
-                            log.info("  → wait_for_url contains=%s timeout=%d", substr, timeout)
-                            self._page.wait_for_load_state("load", timeout=timeout)
+                                raise ValueError(
+                                    "wait_for_url requires 'url_substr' (or 'contains')"
+                                )
+                            log.info(
+                                "  → wait_for_url contains=%s timeout=%d",
+                                substr,
+                                timeout,
+                            )
+                            page = self._page_req()
+                            page.wait_for_load_state("load", timeout=timeout)
                             deadline = time.time() + (timeout / 1000.0)
                             while time.time() < deadline:
-                                if substr in self._page.url:
+                                if substr in page.url:
                                     break
                                 time.sleep(0.05)
                             else:
-                                raise TimeoutError(f"URL did not contain '{substr}' within {timeout} ms (last={self._page.url})")
+                                last = page.url
+                                raise TimeoutError(
+                                    "URL did not contain "
+                                    f"'{substr}' within {timeout} ms "
+                                    f"(last={last})"
+                                )
 
                         # ---- Form fill ----
                         elif kind == "fill":
@@ -123,15 +179,19 @@ class Runner:
                             # Backward-compat: allow "text" if "value" missing
                             if val is None:
                                 val = step.get("text", "")
-                            log.info("  → fill %s value=%s", sel, ("***" if mask else val))
-                            self._page.fill(sel, str(val))
+                            log.info(
+                                "  → fill %s value=%s", sel, ("***" if mask else val)
+                            )
+                            page = self._page_req()
+                            page.fill(sel, str(val))
 
                         # ---- Click ----
                         elif kind == "click":
                             selector = step.get("selector")
                             log.info("  → click selector=%s", selector)
                             if selector:
-                                self._page.click(selector)
+                                page = self._page_req()
+                                page.click(selector)
 
                         # ---- Waits (basic stub) ----
                         elif kind in ("wait", "wait_for"):
@@ -162,7 +222,9 @@ class Runner:
 
                         # ---- Screenshot (stub artifact) ----
                         elif kind == "screenshot":
-                            target = step.get("target", "viewport")  # fullpage | viewport | selector
+                            target = step.get(
+                                "target", "viewport"
+                            )  # fullpage | viewport | selector
                             path = step.get("path")
                             if not path:
                                 log.warning("  ! screenshot skipped: path is required")
@@ -170,11 +232,18 @@ class Runner:
                                 p = Path(path)
                                 p.parent.mkdir(parents=True, exist_ok=True)
                                 try:
+                                    page = self._page_req()
                                     if target == "selector" and step.get("selector"):
-                                        self._page.locator(step["selector"]).screenshot(path=str(p))
+                                        page.locator(step["selector"]).screenshot(
+                                            path=str(p)
+                                        )
                                     else:
-                                        full_page = True if target == "fullpage" else False
-                                        self._page.screenshot(path=str(p), full_page=full_page)
+                                        full_page = (
+                                            True if target == "fullpage" else False
+                                        )
+                                        page.screenshot(
+                                            path=str(p), full_page=full_page
+                                        )
                                     log.info("  → screenshot saved: %s", str(p))
                                 except Exception as e:
                                     log.error("  ! screenshot failed: %s", e)
@@ -182,7 +251,8 @@ class Runner:
                         # ---- Title assertion ----
                         elif kind == "assert_title":
                             try:
-                                actual = self._page.title() or ""
+                                page = self._page_req()
+                                actual = page.title() or ""
                             except Exception:
                                 actual = self.state.get("title", "")
                             expected = step.get("expected")
@@ -194,30 +264,44 @@ class Runner:
                             failed = False
                             if expected is not None:
                                 if match_mode == "equals":
-                                    failed = (actual != expected)
+                                    failed = actual != expected
                                 elif match_mode == "contains":
-                                    failed = (expected not in actual)
+                                    failed = expected not in actual
                                 elif match_mode == "matches":
                                     try:
-                                        failed = (re.search(expected, actual) is None)
+                                        failed = re.search(expected, actual) is None
                                     except re.error as e:
                                         log.error("assert_title regex error: %s", e)
                                         failed = True
                                 else:
-                                    log.warning("  ! unknown match_mode=%s (fallback equals)", match_mode)
-                                    failed = (actual != expected)
+                                    log.warning(
+                                        "  ! unknown match_mode=%s (fallback equals)",
+                                        match_mode,
+                                    )
+                                    failed = actual != expected
                                 if failed:
-                                    msg = step.get("message") or f"assert_title failed: mode={match_mode} expected='{expected}' got='{actual}'"
+                                    msg = (
+                                        step.get("message")
+                                        or f"assert_title failed: mode={match_mode} expected='{expected}' got='{actual}'"
+                                    )
                                     log.error("%s", msg)
                             else:
                                 # Backward compatibility with old DSL (includes/equals)
                                 if includes:
                                     for s in includes:
                                         if s not in actual:
-                                            log.error("assert_title failed: '%s' not in '%s'", s, actual)
+                                            log.error(
+                                                "assert_title failed: '%s' not in '%s'",
+                                                s,
+                                                actual,
+                                            )
                                             failed = True
                                 if equals is not None and actual != equals:
-                                    log.error("assert_title failed: expected '%s', got '%s'", equals, actual)
+                                    log.error(
+                                        "assert_title failed: expected '%s', got '%s'",
+                                        equals,
+                                        actual,
+                                    )
                                     failed = True
 
                             if failed:
@@ -226,7 +310,10 @@ class Runner:
 
                         # ---- Download (placeholder) ----
                         elif kind == "download":
-                            log.info("  → download to path=%s", step.get("path", "./artifacts"))
+                            log.info(
+                                "  → download to path=%s",
+                                step.get("path", "./artifacts"),
+                            )
 
                         else:
                             log.warning("  ! unknown act/action: %s (skip)", kind)
@@ -240,6 +327,11 @@ class Runner:
 
         finally:
             try:
+                if self._context is not None:
+                    try:
+                        self._context.close()
+                    except Exception:
+                        pass
                 if self._browser is not None:
                     self._browser.close()
             finally:
@@ -261,18 +353,19 @@ class Runner:
 
     def _save_failure_artifacts(self, reason: str = "error") -> None:
         try:
-            if getattr(self, "_page", None) is None:
+            page = self._page
+            if page is None:
                 return
             ts = self._timestamp()
             png = self.failed_dir / f"failed_{reason}_{ts}.png"
             html = self.failed_dir / f"failed_{reason}_{ts}.html"
             try:
-                self._page.screenshot(path=str(png), full_page=True)
+                page.screenshot(path=str(png), full_page=True)
                 log.error("Saved failure screenshot: %s", png)
             except Exception:
                 pass
             try:
-                html_content = self._page.content()
+                html_content = page.content()
                 html.write_text(html_content, encoding="utf-8")
                 log.error("Saved failure HTML: %s", html)
             except Exception:
