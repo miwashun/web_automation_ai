@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 import os
+import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+
 from dotenv import load_dotenv
-import re
 
 # --- .env auto-load ---
 _HERE = Path(__file__).resolve()
@@ -18,14 +20,18 @@ for _p in _DOTENV_CANDIDATES:
 
 _ENV_PATTERN = re.compile(r"\$\{ENV:([A-Za-z_][A-Za-z0-9_]*)\}")
 
+
 def get(key: str, default: str | None = None) -> str | None:
     return os.environ.get(key, default)
+
 
 def _resolve_str(s: str) -> str:
     def _sub(m: re.Match[str]) -> str:
         k = m.group(1)
         return os.environ.get(k, "")
+
     return _ENV_PATTERN.sub(_sub, s)
+
 
 def resolve(value: Any) -> Any:
     if isinstance(value, str):

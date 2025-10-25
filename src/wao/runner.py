@@ -73,7 +73,7 @@ class Runner:
             pass
 
     @contextmanager
-    def _step_scope(self, idx: int, step: Dict[str, Any]):
+    def _step_scope(self, idx: int, step: Dict[str, Any]) -> Any:
         """Trace step start/ok/err with timing and page URL when possible."""
         t0 = time.perf_counter()
         self._trace("step_start", {"i": idx, "step": step})
@@ -130,9 +130,7 @@ class Runner:
                         elif kind == "wait_for_selector":
                             selector = step["selector"]
                             timeout = int(step.get("timeout", 10000))
-                            state = (
-                                step.get("state") or "visible"
-                            )  # "attached" | "detached" | "hidden" | "visible"
+                            state = step.get("state") or "visible"  # "attached" | "detached" | "hidden" | "visible"
                             log.info(
                                 "  → wait_for_selector selector=%s state=%s timeout=%d",
                                 selector,
@@ -140,17 +138,13 @@ class Runner:
                                 timeout,
                             )
                             page = self._page_req()
-                            page.wait_for_selector(
-                                selector, state=state, timeout=timeout
-                            )
+                            page.wait_for_selector(selector, state=state, timeout=timeout)
 
                         elif kind == "wait_for_url":
                             substr = step.get("url_substr") or step.get("contains")
                             timeout = int(step.get("timeout", 10000))
                             if not substr:
-                                raise ValueError(
-                                    "wait_for_url requires 'url_substr' (or 'contains')"
-                                )
+                                raise ValueError("wait_for_url requires 'url_substr' (or 'contains')")
                             log.info(
                                 "  → wait_for_url contains=%s timeout=%d",
                                 substr,
@@ -166,9 +160,7 @@ class Runner:
                             else:
                                 last = page.url
                                 raise TimeoutError(
-                                    "URL did not contain "
-                                    f"'{substr}' within {timeout} ms "
-                                    f"(last={last})"
+                                    "URL did not contain " f"'{substr}' within {timeout} ms " f"(last={last})"
                                 )
 
                         # ---- Form fill ----
@@ -179,9 +171,7 @@ class Runner:
                             # Backward-compat: allow "text" if "value" missing
                             if val is None:
                                 val = step.get("text", "")
-                            log.info(
-                                "  → fill %s value=%s", sel, ("***" if mask else val)
-                            )
+                            log.info("  → fill %s value=%s", sel, ("***" if mask else val))
                             page = self._page_req()
                             page.fill(sel, str(val))
 
@@ -222,9 +212,7 @@ class Runner:
 
                         # ---- Screenshot (stub artifact) ----
                         elif kind == "screenshot":
-                            target = step.get(
-                                "target", "viewport"
-                            )  # fullpage | viewport | selector
+                            target = step.get("target", "viewport")  # fullpage | viewport | selector
                             path = step.get("path")
                             if not path:
                                 log.warning("  ! screenshot skipped: path is required")
@@ -234,16 +222,10 @@ class Runner:
                                 try:
                                     page = self._page_req()
                                     if target == "selector" and step.get("selector"):
-                                        page.locator(step["selector"]).screenshot(
-                                            path=str(p)
-                                        )
+                                        page.locator(step["selector"]).screenshot(path=str(p))
                                     else:
-                                        full_page = (
-                                            True if target == "fullpage" else False
-                                        )
-                                        page.screenshot(
-                                            path=str(p), full_page=full_page
-                                        )
+                                        full_page = True if target == "fullpage" else False
+                                        page.screenshot(path=str(p), full_page=full_page)
                                     log.info("  → screenshot saved: %s", str(p))
                                 except Exception as e:
                                     log.error("  ! screenshot failed: %s", e)
@@ -280,9 +262,10 @@ class Runner:
                                     )
                                     failed = actual != expected
                                 if failed:
-                                    msg = (
-                                        step.get("message")
-                                        or f"assert_title failed: mode={match_mode} expected='{expected}' got='{actual}'"
+                                    msg = step.get("message") or (
+                                        "assert_title failed: "
+                                        f"mode={match_mode} expected='{expected}' "
+                                        f"got='{actual}'"
                                     )
                                     log.error("%s", msg)
                             else:

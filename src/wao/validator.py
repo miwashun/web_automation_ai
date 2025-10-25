@@ -1,14 +1,22 @@
 from __future__ import annotations
-import os, json
+
+import json
 from pathlib import Path
-from jsonschema import validate as _validate, ValidationError as _ValidationError
+from typing import Any, Dict, cast
+
+from jsonschema import ValidationError as _ValidationError
+from jsonschema import validate as _validate
+
 
 class FlowValidationError(Exception):
     pass
 
-def _read_json(path: str):
+
+def _read_json(path: str) -> Dict[str, Any]:
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+    return cast(Dict[str, Any], data)
+
 
 def _normalize_flow(flow: dict) -> dict:
     """Backward-compat normalization (e.g., wait.ms -> wait.timeout)."""
@@ -25,6 +33,7 @@ def _normalize_flow(flow: dict) -> dict:
         # もし他にも後方互換が必要ならここに追記
     return flow
 
+
 def validate_flow(path: str) -> dict:
     """Load, normalize, and validate a flow JSON. Returns normalized dict."""
     flow = _read_json(path)
@@ -39,9 +48,8 @@ def validate_flow(path: str) -> dict:
     ]
     schema_path = next((str(p) for p in candidates if p.is_file()), None)
     if not schema_path:
-        raise FlowValidationError(
-            "Schema file not found. Looked for:\n- " + "\n- ".join(map(str, candidates))
-        )
+        searched = "\n- ".join(map(str, candidates))
+        raise FlowValidationError("Schema file not found. Looked for:\n- " + searched)
 
     schema = _read_json(schema_path)
     try:

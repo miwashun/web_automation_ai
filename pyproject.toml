@@ -11,3 +11,10 @@ dependencies = ["jsonschema>=4.23.0", "python-dotenv>=1.0.1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
