@@ -37,3 +37,13 @@ repos:
     rev: v1.10.0
     hooks:
       - id: mypy
+
+  # ---- Run pytest before push (block push on failures) ----
+  - repo: local
+    hooks:
+      - id: pytest-pre-push
+        name: pytest (pre-push)
+        entry: python -m pytest -q -vv
+        language: system
+        pass_filenames: false
+        stages: [push]
