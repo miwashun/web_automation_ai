@@ -1,0 +1,35 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - run: python -m playwright install --with-deps
+      - run: python -m pytest -q -vv
+      - name: Upload failed artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-artifacts
+          path: artifacts/failed
+          if-no-files-found: ignore
+      - name: Upload screenshots (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots
+          if-no-files-found: ignore
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
