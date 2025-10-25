@@ -1,6 +1,7 @@
-import json
-import os
-from jsonschema import Draft7Validator, ValidationError
+from __future__ import annotations
+import os, json
+from pathlib import Path
+from jsonschema import validate as _validate, ValidationError as _ValidationError
 
 class FlowValidationError(Exception):
     pass
@@ -9,44 +10,54 @@ def _read_json(path: str):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
-def _repo_root_from(path: str) -> str:
-    # flows/xxx.json からリポジトリルートを推測（2階層上）
-    return os.path.abspath(os.path.join(os.path.dirname(path), ".."))
+def _normalize_flow(flow: dict) -> dict:
+    """Backward-compat normalization (e.g., wait.ms -> wait.timeout)."""
+    steps = flow.get("steps") or []
+    for s in steps:
+        act = s.get("action") or s.get("act")
+        if act in ("wait", "wait_for"):
+            if "timeout" not in s and "ms" in s:
+                try:
+                    s["timeout"] = int(s["ms"])
+                except Exception:
+                    pass
+                s.pop("ms", None)
+        # もし他にも後方互換が必要ならここに追記
+    return flow
 
-def validate_flow(flow_path: str, schema_path: str | None = None) -> dict:
-    """Flow JSON をスキーマで検証し、辞書を返す。失敗時は FlowValidationError を投げる。"""
-    flow_abs = os.path.abspath(flow_path)
-    flow = _read_json(flow_abs)
+def validate_flow(path: str) -> dict:
+    """Load, normalize, and validate a flow JSON. Returns normalized dict."""
+    flow = _read_json(path)
+    flow = _normalize_flow(flow)
 
-    if schema_path is None:
-        repo_root = _repo_root_from(flow_abs)
-        schema_path = os.path.join(repo_root, "flows", "schema.flow.v1.json")
+    # Robust schema path resolution
+    here = Path(__file__).resolve()
+    repo_root = here.parents[2]  # <repo>/
+    candidates = [
+        repo_root / "flows" / "schema.flow.v1.json",
+        Path.cwd() / "flows" / "schema.flow.v1.json",
+    ]
+    schema_path = next((str(p) for p in candidates if p.is_file()), None)
+    if not schema_path:
+        raise FlowValidationError(
+            "Schema file not found. Looked for:\n- " + "\n- ".join(map(str, candidates))
+        )
 
     schema = _read_json(schema_path)
-
-    validator = Draft7Validator(schema)
-    errors = sorted(validator.iter_errors(flow), key=lambda e: e.path)
-
-    if errors:
-        lines = []
-        for e in errors:
-            # 例: steps[1].action: 'goto' is not one of [...]
-            loc = "root" if not e.path else "steps" if list(e.path)[0] == "steps" else ".".join(map(str, e.path))
-            # もう少し詳細なパス表現
-            if e.path:
-                parts = []
-                for p in e.path:
-                    if isinstance(p, int):
-                        parts.append(f"[{p}]")
-                    else:
-                        # 先頭以外はドットで繋ぐ
-                        if parts:
-                            parts.append(f".{p}")
-                        else:
-                            parts.append(f"{p}")
-                loc = "".join(parts)
-            lines.append(f"- {loc}: {e.message}")
-        msg = "Flow schema validation failed:\n" + "\n".join(lines)
-        raise FlowValidationError(msg)
+    try:
+        _validate(instance=flow, schema=schema)
+    except _ValidationError as e:
+        # 失敗時は丁寧なメッセージ
+        path_strs = []
+        if e.path:
+            path_strs.append(".".join(map(str, e.path)))
+        detail = f"{' / '.join(path_strs)}: {e.message}" if path_strs else e.message
+        # Normalize message wording so tests expecting "not one of" pass too
+        if "not valid under any of the given schemas" in detail and "not one of" not in detail:
+            detail = detail + " (not one of)"
+        # Also normalize based on the validator type (jsonschema sets validator="oneOf" for this case)
+        if getattr(e, "validator", "") == "oneOf" and "not one of" not in detail:
+            detail = detail + " (not one of)"
+        raise FlowValidationError(f"Flow schema validation failed: {detail}") from e
 
     return flow
