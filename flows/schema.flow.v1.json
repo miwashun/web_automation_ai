@@ -9,27 +9,125 @@
       "type": "array",
       "items": {
         "oneOf": [
-          { "type": "object", "additionalProperties": false,
-            "properties": { "name": { "type": "string" }, "action": { "const": "open_url" }, "url": { "type": "string", "minLength": 1 } },
-            "required": ["name", "action", "url"] },
-          { "type": "object", "additionalProperties": false,
-            "properties": { "name": { "type": "string" }, "action": { "const": "wait" }, "timeout": { "type": "integer", "minimum": 1 } },
-            "required": ["name", "action", "timeout"] },
-          { "type": "object", "additionalProperties": false,
-            "properties": { "name": { "type": "string" }, "action": { "const": "click" }, "selector": { "type": "string", "minLength": 1 } },
-            "required": ["name", "action", "selector"] },
-          { "type": "object", "additionalProperties": false,
-            "properties": { "name": { "type": "string" }, "action": { "const": "fill" }, "selector": { "type": "string", "minLength": 1 }, "value": { "type": "string" } },
-            "required": ["name", "action", "selector", "value"] },
-          { "type": "object", "additionalProperties": false,
-            "properties": { "name": { "type": "string" }, "action": { "const": "log" }, "message": { "type": "string" }, "level": { "type": "string", "enum": ["info", "warn", "error"] } },
-            "required": ["name", "action", "message"] },
-          { "type": "object", "additionalProperties": false,
-            "properties": { "name": { "type": "string" }, "action": { "const": "sleep_random" }, "min_ms": { "type": "integer", "minimum": 0 }, "max_ms": { "type": "integer", "minimum": 0 } },
-            "required": ["name", "action", "min_ms", "max_ms"] },
-          { "type": "object", "additionalProperties": false,
-            "properties": { "name": { "type": "string" }, "action": { "const": "screenshot" }, "path": { "type": "string", "minLength": 1 }, "target": { "type": "string", "enum": ["viewport", "fullpage", "selector"] }, "selector": { "type": "string" } },
-            "required": ["name", "action", "path"] }
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "open_url" },
+              "url": { "type": "string", "minLength": 1 }
+            },
+            "required": ["name", "action", "url"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "wait" },
+              "timeout": { "type": "integer", "minimum": 1 }
+            },
+            "required": ["name", "action", "timeout"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "click" },
+              "selector": { "type": "string", "minLength": 1 }
+            },
+            "required": ["name", "action", "selector"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "fill" },
+              "selector": { "type": "string", "minLength": 1 },
+              "value": { "type": "string" }
+            },
+            "required": ["name", "action", "selector", "value"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "log" },
+              "message": { "type": "string" },
+              "level": { "type": "string", "enum": ["info", "warn", "error"] }
+            },
+            "required": ["name", "action", "message"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "sleep_random" },
+              "min_ms": { "type": "integer", "minimum": 0 },
+              "max_ms": { "type": "integer", "minimum": 0 }
+            },
+            "required": ["name", "action", "min_ms", "max_ms"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "screenshot" },
+              "path": { "type": "string", "minLength": 1 },
+              "target": {
+                "type": "string",
+                "enum": ["viewport", "fullpage", "selector"]
+              },
+              "selector": { "type": "string" }
+            },
+            "required": ["name", "action", "path"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "wait_for_selector" },
+              "selector": { "type": "string", "minLength": 1 },
+              "state": {
+                "type": "string",
+                "enum": ["attached", "detached", "hidden", "visible"]
+              },
+              "timeout": { "type": "integer", "minimum": 1 }
+            },
+            "required": ["name", "action", "selector"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "wait_for_url" },
+              "url_substr": { "type": "string", "minLength": 1 },
+              "timeout": { "type": "integer", "minimum": 1 }
+            },
+            "required": ["name", "action", "url_substr"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "action": { "const": "assert_title" },
+              "expected": { "type": "string" },
+              "match_mode": {
+                "type": "string",
+                "enum": ["equals", "contains", "matches"]
+              },
+              "message": { "type": "string" }
+            },
+            "required": ["name", "action", "expected"]
+          }
         ]
       }
     }
