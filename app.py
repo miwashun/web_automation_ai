@@ -1,3 +1,10 @@
+# Ensure local 'src' is importable when running from project root
+import sys as _sys_for_path
+import pathlib as _pathlib_for_path
+_ROOT = _pathlib_for_path.Path(__file__).resolve().parent
+_SRC = _ROOT / "src"
+if str(_SRC) not in _sys_for_path.path:
+    _sys_for_path.path.insert(0, str(_SRC))
 import argparse
 import sys
 from wao.validator import validate_flow, FlowValidationError
