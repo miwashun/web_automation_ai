@@ -1,0 +1,14 @@
+extends: default
+
+rules:
+  # よく出るが実害のないルールを無効化/緩和
+  document-start: disable           # 先頭の --- を必須にしない
+  truthy: disable                   # "on" などのtruthy判定を無効化
+  line-length: disable
+
+  # インラインマップの空白などは検出したいならここで fine-tune
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+
+exclude: .venv|node_modules|dist|build
