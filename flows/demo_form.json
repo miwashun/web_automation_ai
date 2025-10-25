@@ -1,0 +1,12 @@
+{
+  "version": "0.1.0",
+  "name": "Form Input Test (W3Schools) - schema-compliant",
+  "steps": [
+    {"name": "log_start", "action": "log", "message": "Open HTML form page"},
+    {"name": "open_form", "action": "open_url", "url": "https://www.w3schools.com/html/html_forms.asp"},
+    {"name": "fill_first_name", "action": "fill", "selector": "#fname", "value": "Taro"},
+    {"name": "fill_last_name", "action": "fill", "selector": "#lname", "value": "Yamada"},
+    {"name": "sleep_random_brief", "action": "sleep_random", "min_ms": 1000, "max_ms": 2000},
+    {"name": "log_done", "action": "log", "message": "✅ Form filled successfully"}
+  ]
+}

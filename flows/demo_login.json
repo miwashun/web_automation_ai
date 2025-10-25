@@ -1,0 +1,13 @@
+{
+  "version": "0.1.0",
+  "name": "Practice Test Login Flow - schema-compliant",
+  "steps": [
+    {"name": "log_start", "action": "log", "message": "Open login page"},
+    {"name": "open_login", "action": "open_url", "url": "https://practicetestautomation.com/practice-test-login/"},
+    {"name": "fill_username", "action": "fill", "selector": "#username", "value": "student"},
+    {"name": "fill_password", "action": "fill", "selector": "#password", "value": "Password123"},
+    {"name": "click_submit", "action": "click", "selector": "#submit"},
+    {"name": "wait_after_login", "action": "wait", "timeout": 1000},
+    {"name": "log_done", "action": "log", "message": "✅ Login flow executed"}
+  ]
+}
