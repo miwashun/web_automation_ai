@@ -1,43 +1,39 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "WAO Flow v1",
   "type": "object",
-  "required": ["version", "name", "steps"],
   "properties": {
-    "version": { "type": "string", "const": "0.1.0" },
-    "name": { "type": "string", "minLength": 1 },
+    "site": { "type": "string" },
+    "version": { "type": "string" },
+    "name": { "type": "string" },
     "steps": {
       "type": "array",
-      "minItems": 1,
       "items": {
-        "type": "object",
-        "required": ["action", "name"],
-        "properties": {
-          "action": { "type": "string", "enum": ["open_url", "wait", "click", "fill", "log", "sleep_random"] },
-          "name": { "type": "string", "minLength": 1 },
-
-          "url": { "type": "string", "format": "uri" },
-          "ms": { "type": "integer", "minimum": 0 },
-
-          "selector": { "type": "string", "minLength": 1 },
-          "value": { "type": "string" },
-
-          "message": { "type": "string" },
-
-          "min_ms": { "type": "integer", "minimum": 0 },
-          "max_ms": { "type": "integer", "minimum": 0 }
-        },
-        "allOf": [
-          { "if": { "properties": { "action": { "const": "open_url" } } }, "then": { "required": ["url"] } },
-          { "if": { "properties": { "action": { "const": "wait" } } }, "then": { "required": ["ms"] } },
-          { "if": { "properties": { "action": { "const": "click" } } }, "then": { "required": ["selector"] } },
-          { "if": { "properties": { "action": { "const": "fill" } } }, "then": { "required": ["selector", "value"] } },
-          { "if": { "properties": { "action": { "const": "log" } } }, "then": { "required": ["message"] } },
-          { "if": { "properties": { "action": { "const": "sleep_random" } } }, "then": { "required": ["min_ms", "max_ms"] } }
-        ],
-        "additionalProperties": false
+        "oneOf": [
+          { "type": "object", "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "action": { "const": "open_url" }, "url": { "type": "string", "minLength": 1 } },
+            "required": ["name", "action", "url"] },
+          { "type": "object", "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "action": { "const": "wait" }, "timeout": { "type": "integer", "minimum": 1 } },
+            "required": ["name", "action", "timeout"] },
+          { "type": "object", "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "action": { "const": "click" }, "selector": { "type": "string", "minLength": 1 } },
+            "required": ["name", "action", "selector"] },
+          { "type": "object", "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "action": { "const": "fill" }, "selector": { "type": "string", "minLength": 1 }, "value": { "type": "string" } },
+            "required": ["name", "action", "selector", "value"] },
+          { "type": "object", "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "action": { "const": "log" }, "message": { "type": "string" }, "level": { "type": "string", "enum": ["info", "warn", "error"] } },
+            "required": ["name", "action", "message"] },
+          { "type": "object", "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "action": { "const": "sleep_random" }, "min_ms": { "type": "integer", "minimum": 0 }, "max_ms": { "type": "integer", "minimum": 0 } },
+            "required": ["name", "action", "min_ms", "max_ms"] },
+          { "type": "object", "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "action": { "const": "screenshot" }, "path": { "type": "string", "minLength": 1 }, "target": { "type": "string", "enum": ["viewport", "fullpage", "selector"] }, "selector": { "type": "string" } },
+            "required": ["name", "action", "path"] }
+        ]
       }
     }
   },
+  "required": ["version", "steps"],
   "additionalProperties": false
 }
