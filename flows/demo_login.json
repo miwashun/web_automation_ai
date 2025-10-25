@@ -8,6 +8,8 @@
     {"name": "fill_password", "action": "fill", "selector": "#password", "value": "Password123"},
     {"name": "click_submit", "action": "click", "selector": "#submit"},
     {"name": "wait_after_login", "action": "wait", "timeout": 1000},
+    {"name": "assert_login_title", "action": "assert_title", "expected": "Logged In Successfully", "match_mode": "contains" },
+    {"name": "take_screenshot", "action": "screenshot", "path": "screenshots/demo_login.png"},
     {"name": "log_done", "action": "log", "message": "✅ Login flow executed"}
   ]
 }

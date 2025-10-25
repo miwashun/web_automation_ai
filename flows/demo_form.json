@@ -7,6 +7,8 @@
     {"name": "fill_first_name", "action": "fill", "selector": "#fname", "value": "Taro"},
     {"name": "fill_last_name", "action": "fill", "selector": "#lname", "value": "Yamada"},
     {"name": "sleep_random_brief", "action": "sleep_random", "min_ms": 1000, "max_ms": 2000},
+    {"name": "assert_form_title", "action": "assert_title", "expected": "HTML Forms", "match_mode": "contains"},
+    {"name": "take_screenshot", "action": "screenshot", "path": "screenshots/demo_form.png"},
     {"name": "log_done", "action": "log", "message": "✅ Form filled successfully"}
   ]
 }
