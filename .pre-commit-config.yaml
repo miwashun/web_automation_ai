@@ -47,4 +47,4 @@ repos:
         entry: python -m pytest -q -vv
         language: system
         pass_filenames: false
-        stages: [push]
+        stages: [pre-push]
