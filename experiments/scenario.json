@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "site": "example.com",
+  "steps": [
+    {"act": "log", "message": "start run"},
+    {"act": "goto", "url": "https://example.com/login"},
+    {"act": "fill", "selector": "#user", "text": "alice"},
+    {"act": "fill", "selector": "#pass", "text": "secret", "mask": true},
+    {"act": "click", "selector": "button[type=submit]"},
+    {"act": "sleep_random", "min_ms": 500, "max_ms": 1000},
+    {"act": "assert_title", "expected": "Dashboard", "match_mode": "contains"},
+    {"act": "screenshot", "target": "viewport", "path": "after-login.png"}
+  ]
+}
