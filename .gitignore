@@ -49,3 +49,6 @@ src/wao.egg-info/
 
 # secrets
 secrets.json
+
+screenshots/
+*.png
