@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import random
 import re
 import sys
 import time
+import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -33,6 +35,10 @@ class Runner:
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
         self.failed_dir.mkdir(parents=True, exist_ok=True)
 
+        # Downloads directory (for wait_download / verify_file)
+        self.downloads_dir = self.artifacts_dir / "downloads"
+        self.downloads_dir.mkdir(parents=True, exist_ok=True)
+
         # Trace (JSONL) output
         self.trace_dir = self.artifacts_dir / "trace"
         self.trace_dir.mkdir(parents=True, exist_ok=True)
@@ -43,13 +49,33 @@ class Runner:
         self._context: Optional[BrowserContext] = None
         self._page: Optional[Page] = None
 
+        # Determine HTTPS error policy (DSL option > env var)
+        # DSL example:
+        # {
+        #   "version": "...",
+        #   "options": { "ignore_https_errors": true },
+        #   "steps": [...]
+        # }
+        _opts = self.dsl.get("options") or {}
+        _opt_ignore = _opts.get("ignore_https_errors")
+        if _opt_ignore is not None:
+            ignore_https_errors = bool(_opt_ignore)
+        else:
+            # Environment override: WAO_IGNORE_HTTPS_ERRORS=1/true/on
+            _env_val = secrets.get("WAO_IGNORE_HTTPS_ERRORS", "0") or "0"
+            ignore_https_errors = str(_env_val).strip().lower() in {"1", "true", "on", "yes"}
+
         # --- Playwright bootstrap (single browser/page reused across steps) ---
         try:
             self._pw = sync_playwright().start()
             # Headless by default; adjust if needed
             self._browser = self._pw.chromium.launch(headless=True)
             # use a context for future trace/download features
-            self._context = self._browser.new_context()
+            self._context = self._browser.new_context(
+                accept_downloads=True,
+                ignore_https_errors=ignore_https_errors,
+            )
+            log.info("Browser context: ignore_https_errors=%s", ignore_https_errors)
             self._page = self._context.new_page()
         except Exception as e:
             log.error("Failed to initialize Playwright: %s", e)
@@ -291,12 +317,109 @@ class Runner:
                                 self._save_failure_artifacts(reason="assert_title")
                                 sys.exit(1)
 
-                        # ---- Download (placeholder) ----
-                        elif kind == "download":
+                        # ---- Wait for a download and save it ----
+                        elif kind == "wait_download":
+                            pattern = step.get("pattern")
+                            if not pattern:
+                                raise ValueError("wait_download requires 'pattern' (regex)")
+                            timeout = int(step.get("timeout", 30000))
+                            to_dir_val = step.get("to", str(self.downloads_dir))
+                            to_dir = Path(secrets.resolve(to_dir_val) if isinstance(to_dir_val, str) else to_dir_val)
+                            selector = step.get("selector")
+
+                            to_dir.mkdir(parents=True, exist_ok=True)
+                            page = self._page_req()
                             log.info(
-                                "  → download to path=%s",
-                                step.get("path", "./artifacts"),
+                                "  → wait_download pattern=%s timeout=%d to=%s",
+                                pattern,
+                                timeout,
+                                to_dir,
                             )
+                            # Expect the download, optionally trigger a click
+                            with page.expect_download(timeout=timeout) as dl_info:
+                                if selector:
+                                    log.info("  → click selector=%s (to trigger download)", selector)
+                                    page.click(selector)
+                            download = dl_info.value
+                            suggested = download.suggested_filename
+                            if re.search(pattern, suggested) is None:
+                                raise ValueError(
+                                    f"Downloaded filename '{suggested}' does not match pattern '{pattern}'"
+                                )
+                            dest_path = to_dir / suggested
+                            download.save_as(str(dest_path))
+                            self.state["last_download_path"] = str(dest_path)
+                            log.info("  → downloaded: %s", dest_path)
+
+                        # ---- Verify a file's hash ----
+                        elif kind == "verify_file":
+                            path_val = step.get("path")
+                            algo = (step.get("hash") or "").lower()
+                            expected = step.get("expected")
+                            if not path_val or not algo or not expected:
+                                raise ValueError("verify_file requires 'path', 'hash', and 'expected'")
+                            file_path = Path(secrets.resolve(path_val) if isinstance(path_val, str) else path_val)
+                            if not file_path.is_file():
+                                raise FileNotFoundError(f"verify_file: not found: {file_path}")
+                            if algo not in {"sha256", "sha1", "md5"}:
+                                raise ValueError("verify_file 'hash' must be one of: sha256, sha1, md5")
+
+                            h = hashlib.new(algo)
+                            with open(file_path, "rb") as rf:
+                                for chunk in iter(lambda: rf.read(8192), b""):
+                                    h.update(chunk)
+                            actual = h.hexdigest()
+                            if actual.lower() != str(expected).lower():
+                                msg = (
+                                    f"verify_file failed: {algo} expected={expected} actual={actual} path={file_path}"
+                                )
+                                log.error("%s", msg)
+                                self._save_failure_artifacts(reason="verify_file")
+                                sys.exit(1)
+                            log.info("  → verify_file OK: %s=%s (%s)", algo, actual, file_path)
+
+                        # ---- Download (actual implementation) ----
+                        elif kind == "download":
+                            # Supports either clicking a selector OR opening a direct URL.
+                            # Optional keys:
+                            #   - selector: CSS selector to click to trigger download
+                            #   - url: direct URL that triggers download
+                            #   - path: destination file path (defaults to artifacts/downloads/<suggested>)
+                            #   - timeout: ms (default 30000)
+                            timeout = int(step.get("timeout", 30000))
+                            selector = step.get("selector")
+                            url_value = step.get("url")
+
+                            if not selector and not url_value:
+                                raise ValueError("download requires either 'selector' or 'url'")
+
+                            # Resolve destination path (if provided), else default to downloads/<suggested_filename>
+                            dest_val = step.get("path")
+                            page = self._page_req()
+                            log.info("  → download start timeout=%d selector=%s url=%s", timeout, selector, url_value)
+
+                            with page.expect_download(timeout=timeout) as dl_info:
+                                if selector:
+                                    log.info("  → click selector=%s (to trigger download)", selector)
+                                    page.click(selector)
+                                else:
+                                    # Direct URL download (navigate to the file URL)
+                                    resolved_url = secrets.resolve(url_value)
+                                    log.info("  → open download URL: %s", resolved_url)
+                                    page.goto(resolved_url)
+
+                            download = dl_info.value
+                            suggested = download.suggested_filename
+                            # Decide destination path
+                            if dest_val:
+                                dest_path = Path(secrets.resolve(dest_val) if isinstance(dest_val, str) else dest_val)
+                            else:
+                                dest_path = self.downloads_dir / suggested
+
+                            dest_path.parent.mkdir(parents=True, exist_ok=True)
+                            download.save_as(str(dest_path))
+                            self.state["last_download_path"] = str(dest_path)
+                            log.info("  → download saved: %s (suggested=%s)", dest_path, suggested)
 
                         else:
                             log.warning("  ! unknown act/action: %s (skip)", kind)

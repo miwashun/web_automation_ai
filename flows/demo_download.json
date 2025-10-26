@@ -1,0 +1,17 @@
+{
+  "version": "0.1.0",
+  "name": "hetzner_1mb_bin",
+  "steps": [
+    { "action": "open_url", "name": "go_root", "url": "https://speed.hetzner.de/" },
+    { "action": "wait_for_selector", "name": "wait_mirror_link", "selector": "a[href*='nbg1-speed.hetzner.com']", "state": "visible", "timeout": 15000 },
+    { "action": "click", "name": "click_mirror", "selector": "a[href*='nbg1-speed.hetzner.com']" },
+    { "action": "wait_for_url", "name": "wait_mirror_nav", "contains": "nbg1-speed.hetzner.com", "timeout": 15000 },
+
+    { "action": "wait", "name": "settle", "timeout": 1000 },
+
+    { "action": "wait_for_selector", "name": "wait_100mb_link", "selector": "a:has-text('100MB.bin')", "state": "visible", "timeout": 30000 },
+    { "action": "download", "name": "download_100mb", "selector": "a:has-text('100MB.bin')", "path": "artifacts/downloads/100MB.bin", "timeout": 60000 },
+
+    { "action": "log", "name": "done", "message": "✅ Downloaded 1MB.bin" }
+  ]
+}
