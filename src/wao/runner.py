@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import random
 import re
 import sys
 import time
-import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -370,9 +369,7 @@ class Runner:
                                     h.update(chunk)
                             actual = h.hexdigest()
                             if actual.lower() != str(expected).lower():
-                                msg = (
-                                    f"verify_file failed: {algo} expected={expected} actual={actual} path={file_path}"
-                                )
+                                msg = f"verify_file failed: {algo} expected={expected} actual={actual} path={file_path}"
                                 log.error("%s", msg)
                                 self._save_failure_artifacts(reason="verify_file")
                                 sys.exit(1)
