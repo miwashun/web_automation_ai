@@ -1,124 +1,25 @@
 import json
 import sys
+from pathlib import Path
 from typing import Any, Dict, cast
 
 from jsonschema import Draft202012Validator, exceptions
 
-SCHEMA = {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "required": ["version", "site", "steps"],
-    "properties": {
-        "version": {"type": "string"},
-        "site": {"type": "string", "minLength": 1},
-        "steps": {"type": "array", "items": {"$ref": "#/$defs/Step"}, "minItems": 1},
-    },
-    "$defs": {
-        "Step": {
-            "type": "object",
-            "required": ["act"],
-            "properties": {"act": {"type": "string"}},
-            "oneOf": [
-                # ---- 基本アクション ----
-                {
-                    "properties": {"act": {"const": "goto"}, "url": {"type": "string"}},
-                    "required": ["url"],
-                },
-                {
-                    "properties": {
-                        "act": {"const": "fill"},
-                        "selector": {"type": "string"},
-                        "text": {"type": "string"},
-                        "mask": {"type": "boolean"},
-                    },
-                    "required": ["selector", "text"],
-                },
-                {
-                    "properties": {
-                        "act": {"const": "click"},
-                        "selector": {"type": "string"},
-                    },
-                    "required": ["selector"],
-                },
-                {
-                    "properties": {
-                        "act": {"const": "wait"},
-                        "for": {"type": "string"},
-                        "timeout": {"type": "integer", "minimum": 0},
-                    }
-                },
-                {
-                    "properties": {
-                        "act": {"const": "wait_for"},
-                        "selector": {"type": "string"},
-                        "state": {
-                            "enum": [
-                                "attached",
-                                "detached",
-                                "visible",
-                                "hidden",
-                                "enabled",
-                                "disabled",
-                                "stable",
-                            ]
-                        },
-                        "timeout": {"type": "integer", "minimum": 0},
-                    }
-                },
-                # ---- 成果物/検証（既存） ----
-                {
-                    "properties": {
-                        "act": {"const": "screenshot"},
-                        "target": {"enum": ["fullpage", "viewport", "selector"]},
-                        "path": {"type": "string"},
-                        "record": {"type": "boolean"},
-                    }
-                },
-                {
-                    "properties": {
-                        "act": {"const": "wait_download"},
-                        "pattern": {"type": "string"},
-                        "to": {"type": "string"},
-                    },
-                    "required": ["pattern"],
-                },
-                {
-                    "properties": {
-                        "act": {"const": "verify_file"},
-                        "hash": {"enum": ["sha256", "sha1", "md5"]},
-                        "record": {"type": "boolean"},
-                    }
-                },
-                # ---- 今回追加（log / sleep_random / assert_title） ----
-                {
-                    "properties": {
-                        "act": {"const": "log"},
-                        "message": {"type": "string"},
-                        "level": {"enum": ["info", "warn", "error"]},
-                    },
-                    "required": ["message"],
-                },
-                {
-                    "properties": {
-                        "act": {"const": "sleep_random"},
-                        "min_ms": {"type": "integer", "minimum": 0},
-                        "max_ms": {"type": "integer", "minimum": 0},
-                    },
-                    "required": ["min_ms", "max_ms"],
-                },
-                {
-                    "properties": {
-                        "act": {"const": "assert_title"},
-                        "expected": {"type": "string"},
-                        "match_mode": {"enum": ["equals", "contains", "matches"]},
-                        "message": {"type": "string"},
-                    },
-                    "required": ["expected"],
-                },
-            ],
-        }
-    },
-}
+
+def _load_schema() -> Dict[str, Any]:
+    """Load shared flow schema from flows/schema.flow.v1.json (Single Source of Truth)."""
+    here = Path(__file__).resolve()
+    # repo_root = <repo>/ (assuming experiments/ is directly under repo root)
+    repo_root = here.parents[1]
+    candidates = [
+        repo_root / "flows" / "schema.flow.v1.json",
+        Path.cwd() / "flows" / "schema.flow.v1.json",
+    ]
+    for p in candidates:
+        if p.is_file():
+            return cast(Dict[str, Any], json.loads(p.read_text(encoding="utf-8")))
+    searched = "\n- ".join(map(str, candidates))
+    raise FileNotFoundError("Schema file not found. Looked for:\n- " + searched)
 
 
 def _format_error(e: exceptions.ValidationError) -> str:
@@ -130,7 +31,8 @@ def _format_error(e: exceptions.ValidationError) -> str:
 
 
 def validate_scenario(data: Dict[str, Any]) -> None:
-    validator = Draft202012Validator(SCHEMA)
+    schema = _load_schema()
+    validator = Draft202012Validator(schema)
     errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
     if errors:
         msgs = "\n".join(_format_error(e) for e in errors)

@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "name": "Example.com Basic Test (schema-compliant)",
+  "site": "example.com",
   "steps": [
     { "name": "log_start", "action": "log", "message": "Opening example.com" },
     { "name": "open_example", "action": "open_url", "url": "https://example.com" },

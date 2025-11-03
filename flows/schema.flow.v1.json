@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
     "site": { "type": "string" },
@@ -21,10 +21,12 @@
             "additionalProperties": false,
             "properties": {
               "name": { "type": "string" },
-              "action": { "const": "open_url" },
+              "action": { "enum": ["open_url", "goto"] },
+              "act": { "enum": ["open_url", "goto"] },
               "url": { "type": "string", "minLength": 1 }
             },
-            "required": ["name", "action", "url"]
+            "required": ["name", "url"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -32,9 +34,11 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "wait" },
+              "act": { "const": "wait" },
               "timeout": { "type": "integer", "minimum": 1 }
             },
-            "required": ["name", "action", "timeout"]
+            "required": ["name", "timeout"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -42,9 +46,11 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "click" },
+              "act": { "const": "click" },
               "selector": { "type": "string", "minLength": 1 }
             },
-            "required": ["name", "action", "selector"]
+            "required": ["name", "selector"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -52,16 +58,18 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "fill" },
+              "act": { "const": "fill" },
               "selector": { "type": "string", "minLength": 1 },
               "value": { "type": "string" },
               "text": { "type": "string" },
               "mask": { "type": "boolean" }
             },
-            "required": ["name", "action", "selector"],
+            "required": ["name", "selector"],
             "anyOf": [
               { "required": ["value"] },
               { "required": ["text"] }
-            ]
+            ],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -69,10 +77,12 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "log" },
+              "act": { "const": "log" },
               "message": { "type": "string" },
               "level": { "type": "string", "enum": ["info", "warn", "error"] }
             },
-            "required": ["name", "action", "message"]
+            "required": ["name", "message"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -80,10 +90,12 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "sleep_random" },
+              "act": { "const": "sleep_random" },
               "min_ms": { "type": "integer", "minimum": 0 },
               "max_ms": { "type": "integer", "minimum": 0 }
             },
-            "required": ["name", "action", "min_ms", "max_ms"]
+            "required": ["name", "min_ms", "max_ms"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -91,6 +103,7 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "screenshot" },
+              "act": { "const": "screenshot" },
               "path": { "type": "string", "minLength": 1 },
               "target": {
                 "type": "string",
@@ -98,22 +111,25 @@
               },
               "selector": { "type": "string" }
             },
-            "required": ["name", "action", "path"]
+            "required": ["name", "path"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
             "additionalProperties": false,
             "properties": {
               "name": { "type": "string" },
-              "action": { "const": "wait_for_selector" },
+              "action": { "enum": ["wait_for_selector", "wait_for"] },
+              "act": { "enum": ["wait_for_selector", "wait_for"] },
               "selector": { "type": "string", "minLength": 1 },
               "state": {
                 "type": "string",
-                "enum": ["attached", "detached", "hidden", "visible"]
+                "enum": ["attached", "detached", "hidden", "visible", "enabled", "disabled", "stable"]
               },
               "timeout": { "type": "integer", "minimum": 1 }
             },
-            "required": ["name", "action", "selector"]
+            "required": ["name", "selector"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -121,15 +137,17 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "wait_for_url" },
+              "act": { "const": "wait_for_url" },
               "url_substr": { "type": "string", "minLength": 1 },
               "contains": { "type": "string", "minLength": 1 },
               "timeout": { "type": "integer", "minimum": 1 }
             },
-            "required": ["name", "action"],
+            "required": ["name"],
             "anyOf": [
               { "required": ["url_substr"] },
               { "required": ["contains"] }
-            ]
+            ],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -137,6 +155,7 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "assert_title" },
+              "act": { "const": "assert_title" },
               "expected": { "type": "string" },
               "match_mode": {
                 "type": "string",
@@ -144,7 +163,8 @@
               },
               "message": { "type": "string" }
             },
-            "required": ["name", "action", "expected"]
+            "required": ["name", "expected"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -152,12 +172,14 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "wait_download" },
+              "act": { "const": "wait_download" },
               "pattern": { "type": "string", "minLength": 1 },
               "to": { "type": "string", "minLength": 1 },
               "timeout": { "type": "integer", "minimum": 1 },
               "selector": { "type": "string" }
             },
-            "required": ["name", "action", "pattern"]
+            "required": ["name", "pattern"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
             "type": "object",
@@ -165,33 +187,38 @@
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "verify_file" },
+              "act": { "const": "verify_file" },
               "path": { "type": "string", "minLength": 1 },
               "hash": { "type": "string", "enum": ["sha256", "sha1", "md5"] },
               "expected": { "type": "string", "minLength": 1 }
             },
-            "required": ["name", "action", "path", "hash", "expected"]
+            "required": ["name", "path", "hash", "expected"],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           },
           {
+            "_note": "experimental; ensure runner supports 'download' before using",
             "type": "object",
             "additionalProperties": false,
             "properties": {
               "name": { "type": "string" },
               "action": { "const": "download" },
+              "act": { "const": "download" },
               "path": { "type": "string", "minLength": 1 },
               "selector": { "type": "string" },
               "url": { "type": "string" },
               "timeout": { "type": "integer", "minimum": 1 }
             },
-            "required": ["name", "action", "path"],
+            "required": ["name", "path"],
             "anyOf": [
               { "required": ["selector"] },
               { "required": ["url"] }
-            ]
+            ],
+            "anyOf": [ { "required": ["act"] }, { "required": ["action"] } ]
           }
         ]
       }
     }
   },
-  "required": ["version", "steps"],
+  "required": ["version", "site", "steps"],
   "additionalProperties": false
 }
