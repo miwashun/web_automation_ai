@@ -21,8 +21,8 @@
             "additionalProperties": false,
             "properties": {
               "name": { "type": "string" },
-              "action": { "enum": ["open_url", "goto"] },
-              "act": { "enum": ["open_url", "goto"] },
+              "action": { "enum": ["open_url"] },
+              "act": { "enum": ["open_url"] },
               "url": { "type": "string", "minLength": 1 }
             },
             "required": ["name", "url"],
@@ -219,6 +219,6 @@
       }
     }
   },
-  "required": ["version", "site", "steps"],
+  "required": ["version", "steps"],
   "additionalProperties": false
 }
